@@ -15,6 +15,41 @@
 
 <script>
 import RepoTable from './RepoTable';
+import gql from 'graphql-tag';
+
+const REPO_QUERY = gql`
+  query REPO_QUERY {
+    # Let's use carbon as our organization
+    organization(login: "carbon-design-system") {
+      # We'll grab all the repositories in one go. To load more resources
+      # continuously, see the advanced topics.
+      repositories(first: 75, orderBy: { field: UPDATED_AT, direction: DESC }) {
+        totalCount
+        nodes {
+          url
+          homepageUrl
+          issues(filterBy: { states: OPEN }) {
+            totalCount
+          }
+          stargazers {
+            totalCount
+          }
+          releases(first: 1) {
+            totalCount
+            nodes {
+              name
+            }
+          }
+          name
+          updatedAt
+          createdAt
+          description
+          id
+        }
+      }
+    }
+  }
+`;
 
 const headers = [
   {
@@ -43,7 +78,7 @@ const headers = [
   }
 ];
 
-const rows = [
+/* const rows = [
   {
     id: '1',
     name: 'Repo 1',
@@ -71,7 +106,8 @@ const rows = [
     stars: '456',
     links: 'Links'
   }
-];
+]; */
+
 
 export default {
   name: 'RepoPage',
@@ -79,9 +115,29 @@ export default {
   data() {
     return {
       headers,
-      rows
     };
+  },
+  apollo: {
+    organization: REPO_QUERY
+  },
+  computed: {
+      rows() {
+          if (!this.organization) {
+              return [];
+          } else {
+              return this.organization.repositories.nodes.map(row => ({
+                  ...row,
+                  key: row.id,
+                  stars: row.stargazers.totalCount,
+                  issueCount: row.issues.totalCount,
+                  createdAt: new Date(row.createdAt).toLocaleDateString(),
+                  updatedAt: new Date(row.updatedAt).toLocaleDateString(),
+                  links: { url: row.url, homepageUrl: row.homepageUrl }
+              }));
+          }
+      }
   }
+
 };
 </script>
 
